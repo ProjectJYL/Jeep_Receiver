@@ -217,9 +217,10 @@ void loop(void)
         // Delay just a little bit to let the other unit and make the transition to receiver
         delay(20);
       }
+      //let's print out the data received
+      printf("Data RECEIVED! Jeep id: %d. Timestamp: %lu. \n\r", rx_buf.JeepID, rx_buf.timestamp);
       //stop listening and trasmit data back here
       radio.stopListening();
-
       //Send the final one back 
       bool ok = radio.write(&rx_buf, sizeof(RF_buf) );
       //check transmit status
@@ -231,6 +232,7 @@ void loop(void)
       {
         printf("Can't send response. \n\r");
       }
+      
       radio.startListening(); //start listening again
     }
   }
