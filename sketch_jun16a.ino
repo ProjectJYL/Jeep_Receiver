@@ -53,6 +53,7 @@ const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
 role_e role = role_pong_back;
 
 #define LED13 13
+#define JEEP_ID 2
 
 typedef struct RF_buf {
   uint16_t JeepID;
@@ -62,6 +63,7 @@ typedef struct RF_buf {
   //create the buf here
 static RF_buf tx_buf; //transmit buffer
 static RF_buf rx_buf; //receive buffer
+
 
 void setup(void)
 {
@@ -121,7 +123,7 @@ void setup(void)
   radio.setPALevel(RF24_PA_LOW);
   radio.setDataRate(RF24_2MBPS);
   radio.printDetails();
-
+  tx_buf.JeepID = JEEP_ID;
 }
 
 void loop(void)
@@ -222,7 +224,8 @@ void loop(void)
       //stop listening and trasmit data back here
       radio.stopListening();
       //Send the final one back 
-      bool ok = radio.write(&rx_buf, sizeof(RF_buf) );
+      tx_buf.timestamp = millis()/1000; //update the timestamp 
+      bool ok = radio.write(&tx_buf, sizeof(RF_buf) ); //send back the response with tx_buf
       //check transmit status
       if(ok)
       {
