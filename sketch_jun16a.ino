@@ -123,7 +123,7 @@ void setup(void)
   radio.setPALevel(RF24_PA_LOW);
   radio.setDataRate(RF24_2MBPS);
   radio.printDetails();
-  tx_buf.JeepID = JEEP_ID;
+  tx_buf.JeepID = JEEP_ID; //assigned jeep id
 }
 
 void loop(void)
@@ -132,7 +132,7 @@ void loop(void)
   // Ping out role.  Repeatedly send the current time
   //
 
-/*
+
   if (role == role_ping_out)
   {
     // First, stop listening so we can talk.
@@ -140,18 +140,16 @@ void loop(void)
 
     // Take the time, and send it.  This will block until complete
     //send timestamp and jeep name
-    tx_buf.JeepID = 1;
     tx_buf.timestamp = millis();
     bool ok = radio.write( &tx_buf, sizeof(RF_buf) );
     //print the output
     if(ok)
     {
-      printf("Data SENT! Jeep id: %d. Timestamp: %lu. \n\r", tx_buf.JeepID, tx_buf.timestamp);
+      printf("Data SENT! Jeep id: %d. Timestamp: %lu. ", tx_buf.JeepID, tx_buf.timestamp);
     }
     else{
-      printf("FAILED to send the data. :(\n\r");
+      printf("FAILED to send the data :(. ");
     }
-
     // Now, continue listening. switch to listening mode
     radio.startListening();
 
@@ -159,37 +157,48 @@ void loop(void)
     unsigned long started_waiting_at = millis();
     bool timeout = false;
     while ( ! radio.available() && ! timeout )
-      if (millis() - started_waiting_at > 200 )
+      if (millis() - started_waiting_at > 250 ) //increase timeout period
         timeout = true;
 
     // Describe the results
-    if ( timeout )
+    if ( timeout ) //response timeout
     {
       printf("Failed, response timed out.\n\r");
-    }
-    else
+    } 
+    else //proceed to print the result received
     {
       char *long_str; //for display long int as char array
       long_str = (char *) malloc(10); 
-      radio.read(&rx_buf, sizeof(RF_buf) );       // Grab the response, compare, and send to debugging spew
-      clearDisplay(WHITE); //flash the LED13 write on display
-      //display the received message and additional info
-      setStr("Jeep ID:", 0, 0, BLACK);
-      setStr(itoa(rx_buf.JeepID, NULL ,10), 40, 0, BLACK);
-      setStr("Time: ", 0, 8, BLACK);
-//      setStr( itoa(rx_buf.timestamp/1000,NULL ,10), 6, 8, BLACK);//convert msec to sec
-      //use sprintf to output long int to a char array buffer then display it
-      sprintf(long_str, "%lu", rx_buf.timestamp);
-      setStr(long_str, 6, 8, BLACK);
-      updateDisplay();
+      bool ok = radio.read(&rx_buf, sizeof(RF_buf) );       // Grab the response, compare, and send to debugging spew
+      uint16_t response_time = millis() - tx_buf.timestamp; //calculate response time
+      rx_buf.timestamp = millis(); //timestamp for receiving the response
+//      clearDisplay(WHITE); //flash the LED13 write on display
+//      //display the received message and additional info
+//      setStr("Jeep ID:", 0, 0, BLACK);
+//      setStr(itoa(rx_buf.JeepID, NULL ,10), 45, 0, BLACK);
+//      setStr("Time: ", 0, 8, BLACK);
+//      //use sprintf to output long int to a char array buffer then display it
+//      sprintf(long_str, "%lu", rx_buf.timestamp);
+//      setStr(long_str, 30, 8, BLACK);
+//      //display response time
+//      sprintf(long_str, "%d", response_time);
+//      setStr("Elapsed: ", 0, 16, BLACK);
+//      setStr(long_str, 50, 16, BLACK);
+//      updateDisplay();
+      if(ok){
+         printf("Response RECEIVED! Jeep id: %d. Timestamp: %lu. \n\r", rx_buf.JeepID, rx_buf.timestamp);
+      }
+      else{
+        printf("FAILED to receive the response. :(\n\r");
+      }
       digitalWrite(LED13, HIGH);
       delay(200);
       digitalWrite(LED13, LOW);
     }
     // Try again 1s later
-    delay(1000); //to allow faster role transition reduce the time. 
+    delay(500); //to allow faster role transition reduce the time. 
   }
-*/
+
   //
   // Pong back role.  Receive each packet, dump it out, and send it back
   //
@@ -200,7 +209,7 @@ void loop(void)
     {
       // Dump the payloads until we've gotten everything
       bool done = false;
-      while(!done)
+      while(!done) //is this going to blcok if the radio failed to read?
       {
         // Fetch the payload, and see if this was the last one.
         done = radio.read(&rx_buf, sizeof(RF_buf) );
@@ -224,7 +233,6 @@ void loop(void)
       //stop listening and trasmit data back here
       radio.stopListening();
       //Send the final one back 
-      tx_buf.timestamp = millis()/1000; //update the timestamp 
       bool ok = radio.write(&tx_buf, sizeof(RF_buf) ); //send back the response with tx_buf
       //check transmit status
       if(ok)
