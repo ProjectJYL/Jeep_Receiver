@@ -21,6 +21,8 @@
 #include "RF24.h"
 #include "printf.h"
 
+
+
 //
 // Hardware configuration
 //
@@ -131,8 +133,6 @@ void loop(void)
   //
   // Ping out role.  Repeatedly send the current time
   //
-
-
   if (role == role_ping_out)
   {
     // First, stop listening so we can talk.
@@ -150,6 +150,7 @@ void loop(void)
     else{
       printf("FAILED to send the data :(. ");
     }
+    
     // Now, continue listening. switch to listening mode
     radio.startListening();
 
@@ -160,11 +161,13 @@ void loop(void)
       if (millis() - started_waiting_at > 250 ) //increase timeout period
         timeout = true;
 
+    
     // Describe the results
     if ( timeout ) //response timeout
     {
       printf("Failed, response timed out.\n\r");
     } 
+    /*
     else //proceed to print the result received
     {
       char *long_str; //for display long int as char array
@@ -195,21 +198,29 @@ void loop(void)
       delay(200);
       digitalWrite(LED13, LOW);
     }
+    */
     // Try again 1s later
-    delay(500); //to allow faster role transition reduce the time. 
+    //delay(1000); //to allow faster role transition reduce the time. 
   }
 
   //
   // Pong back role.  Receive each packet, dump it out, and send it back
   //
+
   if ( role == role_pong_back )
   {
+    // Wait here until we get a response, or timeout (250ms)
+    unsigned long started_waiting_at = millis();
+    bool timeout = false;
+    while ( ! radio.available() && ! timeout )
+      if (millis() - started_waiting_at > 250 ) //increase timeout period
+        timeout = true;
     // if there is data ready
-    if(radio.available())
+    if(!timeout)
     {
       // Dump the payloads until we've gotten everything
       bool done = false;
-      while(!done) //is this going to blcok if the radio failed to read?
+      while(!done)
       {
         // Fetch the payload, and see if this was the last one.
         done = radio.read(&rx_buf, sizeof(RF_buf) );
@@ -246,6 +257,20 @@ void loop(void)
       
       radio.startListening(); //start listening again
     }
+  }
+
+  //swtich role back and forth
+  if(role == role_ping_out)
+  {
+    printf("*** CHANGING TO RECEIVE ROLE -- PRESS 'T' TO SWITCH BACK\n\r");
+    role = role_pong_back;
+    radio.openWritingPipe(pipes[1]);
+    radio.openReadingPipe(1, pipes[0]);
+  }else{
+    printf("*** CHANGING TO TRANSMIT ROLE -- PRESS 'R' TO SWITCH BACK\n\r");
+    role = role_ping_out;
+    radio.openWritingPipe(pipes[0]);
+    radio.openReadingPipe(1, pipes[1]);
   }
 
   //
